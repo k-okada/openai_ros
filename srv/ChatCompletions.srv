@@ -1,0 +1,12 @@
+string model
+string messages
+int32 max_tokens
+float32 frequency_penalty
+float32 temperature
+---
+string finish_reason
+string content
+string model
+int32 completion_tokens
+int32 prompt_tokens
+int32 total_tokens

@@ -18,6 +18,8 @@ add_message_files(
 add_service_files(
   FILES
   Completion.srv
+  ChatCompletions.srv
+  AudioSpeech.srv
 )
 
 generate_messages(

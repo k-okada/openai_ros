@@ -1,0 +1,6 @@
+string model
+string voice
+string input
+string response_format
+---
+uint8[] content
