@@ -2,8 +2,12 @@
 
 from openai_ros.msg import StringArray
 from openai_ros.srv import Completion, CompletionResponse
+from openai_ros.srv import ChatCompletions, ChatCompletionsResponse
+from openai_ros.srv import AudioSpeech, AudioSpeechResponse
 import rospy
 from openai import OpenAI
+import json
+import base64
 
 def legacy_servicer(req):
     global client, max_tokens, model
@@ -41,6 +45,39 @@ def chat_servicer(req):
         res.completion_tokens = -1
     return res
 
+def chat_completions_servicer(req):
+    global client
+    res = ChatCompletionsResponse()
+
+    kwargs = dict(model=req.model, messages=json.loads(req.messages), temperature=req.temperature, frequency_penalty=req.frequency_penalty)
+    if req.max_tokens > 0:
+        kwargs['max_tokens'] = req.max_tokens
+    response = client.chat.completions.create(**kwargs)
+
+    res.finish_reason = response.choices[0].finish_reason
+    res.content = response.choices[0].message.content
+    res.model = response.model
+    res.completion_tokens = response.usage.completion_tokens
+    res.prompt_tokens = response.usage.prompt_tokens
+    res.total_tokens = response.usage.total_tokens
+
+    # When response is not working, completion_tokens is None, which chase error on CompleteResponse format(int32)
+    if not isinstance(res.completion_tokens, int):
+        res.completion_tokens = -1
+    return res
+
+def audio_speech_servicer(req):
+    global client
+    res = AudioSpeechResponse()
+
+    kwargs = dict(model=req.model, input=req.input, voice=req.voice)
+    if len(req.response_format) > 0:
+        kwargs['response_format'] = req.response_format
+    response = client.audio.speech.create(**kwargs)
+
+    res.content = base64.b64encode(response.content)
+    return res
+
 def main():
     global client, max_tokens, model
     pub = rospy.Publisher('available_models', StringArray, queue_size=1, latch=True)
@@ -73,6 +110,10 @@ def main():
         rospy.Service('get_response', Completion, legacy_servicer)
     else:
         rospy.Service('get_response', Completion, chat_servicer)
+
+    if endpoint == "chat":
+        rospy.Service('chat_completions', ChatCompletions, chat_completions_servicer)
+        rospy.Service('audio_speech', AudioSpeech, audio_speech_servicer)
 
     rospy.spin()
 
