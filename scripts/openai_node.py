@@ -114,7 +114,7 @@ def main():
     else:
         client = OpenAI(api_key=rospy.get_param('~key'))
     max_tokens = rospy.get_param('~max_tokens', default=256)
-    model = rospy.get_param('~model', default='gpt-3.5-turbo-instruct')
+    model = rospy.get_param('~model', default='gpt-3.5-turbo')
 
     models_msg = StringArray()
     for m in client.models.list():
