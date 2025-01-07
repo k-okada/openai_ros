@@ -94,11 +94,15 @@ def main(mode,
     get_embedding = rospy.ServiceProxy('/get_embedding', Embedding)
 
     if mode == "chat":
-        api_reference_making_requests(model=model_chat)
-        api_reference_audio(model_audio_speech)
-        api_reference_chat_create(model=model_chat)
-        guides_vision(model=model_chat_vision)
-    api_reference_embedding(model=model_embedding)
+        if model_chat is not None:
+            api_reference_making_requests(model=model_chat)
+            api_reference_chat_create(model=model_chat)
+        if model_audio_speech is not None:
+            api_reference_audio(model_audio_speech)
+        if model_chat_vision is not None:
+            guides_vision(model=model_chat_vision)
+    if model_embedding:
+        api_reference_embedding(model=model_embedding)
 
 '''
 from openai import OpenAI
@@ -125,14 +129,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", default="chat", choices=["chat", "legacy"])
     parser.add_argument("--model-embedding", default="text-embedding-ada-002")
+    parser.add_argument("--disable-embedding", action="store_true")
     parser.add_argument("--model-chat", default="gpt-3.5-turbo")
+    parser.add_argument("--disable-chat", action="store_true")
     parser.add_argument("--model-chat-vision", default="gpt-4o-mini")
+    parser.add_argument("--disable-chat-vision", action="store_true")
     parser.add_argument("--model-audio-speech", default="tts-1")
+    parser.add_argument("--disable-audio-speech", action="store_true")
     args = parser.parse_args()
+    print(args)
     main(
         mode=args.mode,
-        model_embedding=args.model_embedding,
-        model_chat=args.model_chat,
-        model_chat_vision=args.model_chat_vision,
-        model_audio_speech=args.model_audio_speech,
+        model_embedding=args.model_embedding if args.disable_embedding is False else None,
+        model_chat=args.model_chat if args.disable_chat is False else None,
+        model_chat_vision=args.model_chat_vision if args.disable_chat_vision is False else None,
+        model_audio_speech=args.model_audio_speech if args.disable_audio_speech is False else None,
         )
