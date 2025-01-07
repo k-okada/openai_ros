@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import argparse
 import rospy
 import json
 import base64
@@ -8,9 +9,10 @@ from openai_ros.srv import AudioSpeech, AudioSpeechRequest
 from openai_ros.srv import Embedding, EmbeddingRequest
 
 ##
-def api_reference_making_requests():
+def api_reference_making_requests(model='gpt-3.5-turbo'):
+    global chat_completion, audio_speech, get_embedding
     rospy.loginfo("-- Example from https://platform.openai.com/docs/api-reference/making-requests")
-    req = ChatCompletionsRequest(model = 'gpt-3.5-turbo',
+    req = ChatCompletionsRequest(model = model,
                                  messages = '[{"role": "user", "content": "Say this is a test!"}]', 
                                  temperature = 0.7)
     rospy.loginfo("{}".format(req.messages))
@@ -19,8 +21,9 @@ def api_reference_making_requests():
 
 
 ##
-def api_reference_audio():
-    req = AudioSpeechRequest(model = 'tts-1',
+def api_reference_audio(model = 'tts-1'):
+    global chat_completion, audio_speech, get_embedding
+    req = AudioSpeechRequest(model = model,
                              input = 'The quick brown fox jumped over the lazy dog.',
                              voice = 'alloy')
     rospy.loginfo("-- Example from https://platform.openai.com/docs/api-reference/audio")
@@ -30,7 +33,8 @@ def api_reference_audio():
     rospy.loginfo(">> write to audio_speech.mp3")
 
 ##
-def api_reference_embedding():
+def api_reference_embedding(model = 'text-embedding-ada-002'):
+    global chat_completion, audio_speech, get_embedding
     req = EmbeddingRequest(model = 'text-embedding-ada-002',
                            input = 'The food was delicious and the waiter...')
     rospy.loginfo("-- Example from https://platform.openai.com/docs/api-reference/embeddings")
@@ -39,6 +43,7 @@ def api_reference_embedding():
 
 ##
 def api_reference_chat_create():
+    global chat_completion, audio_speech, get_embedding
     rospy.loginfo("-- Example from https://platform.openai.com/docs/api-reference/chat/create")
     req = ChatCompletionsRequest(model = 'gpt-3.5-turbo',
                                  messages = '[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "Hello!"}]',
@@ -49,6 +54,7 @@ def api_reference_chat_create():
 
 ##
 def guides_vision():
+    global chat_completion, audio_speech, get_embedding
     rospy.loginfo("-- Example from https://platform.openai.com/docs/guides/vision/quick-start")
     req = ChatCompletionsRequest(model = 'gpt-4-vision-preview',
                                  messages = json.dumps([{"role": "user", "content": [ {"type": "text", "text": "What's in this image?"}, {"type": "image_url", "image_url" : {"url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"}}]}]),
@@ -68,19 +74,27 @@ def guides_vision():
     ret = chat_completion(req)
     rospy.loginfo(">> {}".format(ret.content))
 
-## 
-rospy.init_node('say_this_is_a_test')
-# rospy.wait_for_service('/chat_completions')
-chat_completion = rospy.ServiceProxy('/chat_completions', ChatCompletions)
-# rospy.wait_for_service('/audio_speech')
-audio_speech = rospy.ServiceProxy('/audio_speech', AudioSpeech)
-get_embedding = rospy.ServiceProxy('/get_embedding', Embedding)
 
-#api_reference_making_requests()
-#api_reference_audio()
-api_reference_embedding()
-#api_reference_chat_create()
-#guides_vision()
+def main(mode="chat"):
+    global chat_completion, audio_speech, get_embedding
+    ## 
+    rospy.init_node('say_this_is_a_test')
+
+    if mode == "chat":
+        rospy.wait_for_service('/chat_completions')
+        chat_completion = rospy.ServiceProxy('/chat_completions', ChatCompletions)
+        rospy.wait_for_service('/audio_speech')
+        audio_speech = rospy.ServiceProxy('/audio_speech', AudioSpeech)
+
+    rospy.wait_for_service("/get_embedding")
+    get_embedding = rospy.ServiceProxy('/get_embedding', Embedding)
+
+    if mode == "chat":
+        api_reference_making_requests()
+        api_reference_audio()
+        api_reference_chat_create()
+        guides_vision()
+    api_reference_embedding()
 
 '''
 from openai import OpenAI
@@ -102,3 +116,9 @@ client = OpenAI()
 
 print(completion.choices[0].message)
 '''
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", default="chat", choices=["chat", "legacy"])
+    args = parser.parse_args()
+    main(args.mode)

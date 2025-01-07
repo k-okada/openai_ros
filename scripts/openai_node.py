@@ -7,7 +7,7 @@ from openai_ros.srv import AudioSpeech, AudioSpeechResponse
 from openai_ros.srv import Embedding, EmbeddingResponse
 
 import rospy
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 import json
 import base64
 
@@ -103,8 +103,16 @@ def main():
     global client, max_tokens, model
     pub = rospy.Publisher('available_models', StringArray, queue_size=1, latch=True)
     rospy.init_node('openai_node', anonymous=True)
+    use_azure = rospy.get_param("~use_azure", False)
 
-    client = OpenAI(api_key=rospy.get_param('~key'))
+    if use_azure:
+        client = AzureOpenAI(
+            api_key=rospy.get_param("~key"),
+            azure_endpoint=rospy.get_param("~azure_endpoint"),
+            api_version=rospy.get_param("~azure_api_version", "2024-07-01-preview"),
+        )
+    else:
+        client = OpenAI(api_key=rospy.get_param('~key'))
     max_tokens = rospy.get_param('~max_tokens', default=256)
     model = rospy.get_param('~model', default='gpt-3.5-turbo-instruct')
 

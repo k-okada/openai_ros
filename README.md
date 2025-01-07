@@ -27,6 +27,15 @@ max_tokens: 256
 model: gpt-4o-mini
 ```
 
+When you want to use Azure OpenAI, run
+
+```
+roslaunch openai_ros openai.launch max_tokens:=256 model:=<deployed chat model instance name> use_azure:=true key:=<api key> azure_endpoint:=<endpoint url> 
+```
+
+When you use Azure OpenAI, firstly please prepare some chat or completion model instance deployment to start the node.
+And please prepare other model instances according to which functionalities you want to use (e.g. Embedding, Audio generation and so on)
+
 How to use service
 ------------------
 
