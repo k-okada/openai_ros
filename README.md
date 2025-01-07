@@ -9,7 +9,7 @@ How to start program
 Start from sample lamuch file
 ```
 $ export OPENAI_API_KEY="xxxxxxxxx"
-$ roslaunch openai_ros openai.launch max_tokens:=256 model:=text-davinch-003
+$ roslaunch openai_ros openai.launch max_tokens:=256 model:=gpt-4o-mini
 ```
 
 or put following code within your launch file.
@@ -24,13 +24,17 @@ The contents of `openai_credentials.json` file is something like
 ```
 key: xxxxxxxxx
 max_tokens: 256
-model: text-davinci-003
+model: gpt-4o-mini
 ```
 
 How to use service
 ------------------
 
 ```
-$ rosservice call /openai/get_response '{prompt: "Write a poem about OpenAI"}'
+$ rosservice call /get_response '{prompt: "Write a poem about OpenAI"}'
+```
+
+```
+$ rosservice call /get_embedding '{input: "Write a poem about OpenAI", model: "text-embedding-ada-002"}'
 ```
 

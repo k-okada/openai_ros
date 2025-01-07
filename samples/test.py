@@ -5,6 +5,7 @@ import json
 import base64
 from openai_ros.srv import ChatCompletions, ChatCompletionsRequest
 from openai_ros.srv import AudioSpeech, AudioSpeechRequest
+from openai_ros.srv import Embedding, EmbeddingRequest
 
 ##
 def api_reference_making_requests():
@@ -27,6 +28,14 @@ def api_reference_audio():
     with open ('audio_speech.mp3', 'wb') as f:
         f.write(base64.b64decode(ret.content))
     rospy.loginfo(">> write to audio_speech.mp3")
+
+##
+def api_reference_embedding():
+    req = EmbeddingRequest(model = 'text-embedding-ada-002',
+                           input = 'The food was delicious and the waiter...')
+    rospy.loginfo("-- Example from https://platform.openai.com/docs/api-reference/embeddings")
+    ret = get_embedding(req)
+    rospy.loginfo("Result: {}".format(ret))
 
 ##
 def api_reference_chat_create():
@@ -61,14 +70,17 @@ def guides_vision():
 
 ## 
 rospy.init_node('say_this_is_a_test')
-rospy.wait_for_service('/chat_completions')
+# rospy.wait_for_service('/chat_completions')
 chat_completion = rospy.ServiceProxy('/chat_completions', ChatCompletions)
-rospy.wait_for_service('/audio_speech')
+# rospy.wait_for_service('/audio_speech')
 audio_speech = rospy.ServiceProxy('/audio_speech', AudioSpeech)
+get_embedding = rospy.ServiceProxy('/get_embedding', Embedding)
+
 #api_reference_making_requests()
 #api_reference_audio()
+api_reference_embedding()
 #api_reference_chat_create()
-guides_vision()
+#guides_vision()
 
 '''
 from openai import OpenAI

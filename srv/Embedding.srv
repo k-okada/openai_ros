@@ -1,0 +1,7 @@
+string input
+string model
+---
+float64[] embedding
+string model
+int32 prompt_tokens
+int32 total_tokens

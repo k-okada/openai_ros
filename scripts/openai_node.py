@@ -4,10 +4,17 @@ from openai_ros.msg import StringArray
 from openai_ros.srv import Completion, CompletionResponse
 from openai_ros.srv import ChatCompletions, ChatCompletionsResponse
 from openai_ros.srv import AudioSpeech, AudioSpeechResponse
+from openai_ros.srv import Embedding, EmbeddingResponse
+
 import rospy
 from openai import OpenAI
 import json
 import base64
+
+
+DEFAULT_COMPLETION_MODEL = ""
+DEFAULT_CHAT_MODEL = ""
+DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 
 def legacy_servicer(req):
     global client, max_tokens, model
@@ -78,6 +85,20 @@ def audio_speech_servicer(req):
     res.content = base64.b64encode(response.content)
     return res
 
+def embedding_servicer(req):
+    global client
+    res = EmbeddingResponse()
+    response = client.embeddings.create(
+        input=[req.input],
+        model=req.model,
+    )
+    res.embedding = response.data[0].embedding
+    res.model = response.model
+    res.prompt_tokens = response.usage.prompt_tokens
+    res.total_tokens = response.usage.total_tokens
+    return res
+
+
 def main():
     global client, max_tokens, model
     pub = rospy.Publisher('available_models', StringArray, queue_size=1, latch=True)
@@ -85,7 +106,7 @@ def main():
 
     client = OpenAI(api_key=rospy.get_param('~key'))
     max_tokens = rospy.get_param('~max_tokens', default=256)
-    model = rospy.get_param('~model', default='text-davinci-003')
+    model = rospy.get_param('~model', default='gpt-3.5-turbo-instruct')
 
     models_msg = StringArray()
     for m in client.models.list():
@@ -114,6 +135,8 @@ def main():
     if endpoint == "chat":
         rospy.Service('chat_completions', ChatCompletions, chat_completions_servicer)
         rospy.Service('audio_speech', AudioSpeech, audio_speech_servicer)
+
+    rospy.Service("get_embedding", Embedding, embedding_servicer)
 
     rospy.spin()
 
