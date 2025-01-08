@@ -100,6 +100,7 @@ def main():
     pub = rospy.Publisher('available_models', StringArray, queue_size=1, latch=True)
     rospy.init_node('openai_node', anonymous=True)
     backend = rospy.get_param("~backend", "openai") # openai or azure
+    rospy.loginfo("Using " + backend + " backend")
 
     if backend == "openai":
         client = OpenAI(api_key=rospy.get_param('~key'))
