@@ -12,10 +12,6 @@ import json
 import base64
 
 
-DEFAULT_COMPLETION_MODEL = ""
-DEFAULT_CHAT_MODEL = ""
-DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
-
 def legacy_servicer(req):
     global client, max_tokens, model
     res = CompletionResponse()
