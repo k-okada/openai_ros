@@ -30,7 +30,7 @@ model: gpt-3.5-turbo
 When you want to use Azure OpenAI, run
 
 ```
-roslaunch openai_ros openai.launch max_tokens:=256 model:=<deployed chat model instance name> use_azure:=true key:=<api key> azure_endpoint:=<endpoint url> 
+roslaunch openai_ros openai.launch backend:=azure key:=<api key> model:=<deployed chat model instance name> azure_endpoint:=<endpoint url> 
 ```
 
 When you use Azure OpenAI, firstly please prepare some chat or completion model instance deployment to start the node.

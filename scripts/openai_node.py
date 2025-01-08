@@ -99,16 +99,20 @@ def main():
     global client, max_tokens, model
     pub = rospy.Publisher('available_models', StringArray, queue_size=1, latch=True)
     rospy.init_node('openai_node', anonymous=True)
-    use_azure = rospy.get_param("~use_azure", False)
+    backend = rospy.get_param("~backend", "openai") # openai or azure
 
-    if use_azure:
+    if backend == "openai":
+        client = OpenAI(api_key=rospy.get_param('~key'))
+    elif backend == "azure":
         client = AzureOpenAI(
             api_key=rospy.get_param("~key"),
             azure_endpoint=rospy.get_param("~azure_endpoint"),
             api_version=rospy.get_param("~azure_api_version", "2024-07-01-preview"),
         )
     else:
-        client = OpenAI(api_key=rospy.get_param('~key'))
+        rospy.logerr("Invalid backend: " + backend)
+        return
+
     max_tokens = rospy.get_param('~max_tokens', default=256)
     model = rospy.get_param('~model', default='gpt-3.5-turbo')
 
