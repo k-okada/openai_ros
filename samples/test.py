@@ -4,6 +4,7 @@ import argparse
 import rospy
 import json
 import base64
+import os
 from openai_ros.srv import ChatCompletions, ChatCompletionsRequest
 from openai_ros.srv import AudioSpeech, AudioSpeechRequest
 from openai_ros.srv import Embedding, EmbeddingRequest
@@ -64,15 +65,19 @@ def guides_vision(model):
     rospy.loginfo(">> {}".format(ret.content))
 
     ##
-    import cv2
-    img = cv2.imread('/usr/share/backgrounds/ryan-stone-skykomish-river.jpg')
-    _, buf = cv2.imencode('.jpg', img)
-    req = ChatCompletionsRequest(model = model,
-                                 messages = json.dumps([{"role": "user", "content": [ {"type": "text", "text": "What's in this image?"}, {"type": "image_url", "image_url" : {"url": "data:image/jpeg;base64,{}".format(base64.b64encode(buf).decode('utf-8'))}}]}]),
-                                 temperature = 1.0, max_tokens=300)
-    rospy.loginfo("{}".format(req.messages[0:255]))
-    ret = chat_completion(req)
-    rospy.loginfo(">> {}".format(ret.content))
+    imagepath = '/usr/share/backgrounds/ryan-stone-skykomish-river.jpg'
+    if not os.path.exists(imagepath):
+        rospy.logerr("{} not exists. Please install ubuntu-wallpapers-focal".format(imagepath))
+    else:
+        import cv2
+        img = cv2.imread(imagepath)
+        _, buf = cv2.imencode('.jpg', img)
+        req = ChatCompletionsRequest(model = model,
+                                    messages = json.dumps([{"role": "user", "content": [ {"type": "text", "text": "What's in this image?"}, {"type": "image_url", "image_url" : {"url": "data:image/jpeg;base64,{}".format(base64.b64encode(buf).decode('utf-8'))}}]}]),
+                                    temperature = 1.0, max_tokens=300)
+        rospy.loginfo("{}".format(req.messages[0:255]))
+        ret = chat_completion(req)
+        rospy.loginfo(">> {}".format(ret.content))
 
 
 def main(mode,
