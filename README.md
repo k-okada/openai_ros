@@ -9,7 +9,13 @@ How to start program
 Start from sample lamuch file
 ```
 $ export OPENAI_API_KEY="xxxxxxxxx"
-$ roslaunch openai_ros openai.launch max_tokens:=256 model:=gpt-3.5-turbo
+$ roslaunch openai_ros openai.launch model:=gpt-3.5-turbo
+```
+
+or
+
+```
+$ roslaunch openai_ros openai.launch key:="xxxxxxxx" model:=gpt-3.5-turbo
 ```
 
 or put following code within your launch file.
@@ -30,11 +36,18 @@ model: gpt-3.5-turbo
 When you want to use Azure OpenAI, run
 
 ```
-roslaunch openai_ros openai.launch backend:=azure key:=<api key> model:=<deployed chat model instance name> azure_endpoint:=<endpoint url> 
+roslaunch openai_ros openai.launch endpoint:="https://xxxxxxx.azure.com" key:="<api key>" model:="<deployed chat model instance name>"  
 ```
 
-When you use Azure OpenAI, firstly please prepare some chat or completion model instance deployment to start the node.
+When you use Azure OpenAI, firstly please prepare some chat or completion model instance deployment to start the node. (e.g. gpt-4o-mini)
 And please prepare other model instances according to which functionalities you want to use (e.g. Embedding, Audio generation and so on)
+
+
+And when you want to use [llama-cpp-python], run
+
+```
+roslaunch openai_ros openai.launch endpoint:=http://localhost:8000/v1 key:=dummy model:="<model name you used for server>"
+```
 
 How to use service
 ------------------

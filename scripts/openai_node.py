@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
-from openai_ros.msg import StringArray
-from openai_ros.srv import Completion, CompletionResponse
-from openai_ros.srv import ChatCompletions, ChatCompletionsResponse
-from openai_ros.srv import AudioSpeech, AudioSpeechResponse
-from openai_ros.srv import Embedding, EmbeddingResponse
+import base64
+import json
 
 import rospy
-from openai import OpenAI, AzureOpenAI
-import json
-import base64
+from openai import AzureOpenAI, OpenAI
+from typing import Optional
+
+from openai_ros.msg import StringArray
+from openai_ros.srv import (AudioSpeech, AudioSpeechResponse, ChatCompletions,
+                            ChatCompletionsResponse, Completion,
+                            CompletionResponse, Embedding, EmbeddingResponse)
 
 
 def legacy_servicer(req):
@@ -99,15 +100,30 @@ def main():
     global client, max_tokens, model
     pub = rospy.Publisher('available_models', StringArray, queue_size=1, latch=True)
     rospy.init_node('openai_node', anonymous=True)
-    backend = rospy.get_param("~backend", "openai") # openai or azure
+    endpoint: Optional[str] = rospy.get_param("~endpoint", None)
+    backend: Optional[str] = rospy.get_param("~backend", None) # openai or azure or None.
+
+    if backend is not None:
+        rospy.logdebug("Backend is set to " + backend)
+    elif (endpoint is not None and len(endpoint) != 0) and endpoint.split("/")[2].endswith('azure.com'):
+        backend = "azure"
+    else:
+        backend = "openai"
+
     rospy.loginfo("Using " + backend + " backend")
 
     if backend == "openai":
-        client = OpenAI(api_key=rospy.get_param('~key'))
+        if endpoint is None or len(endpoint) == 0:
+            client = OpenAI(api_key=rospy.get_param('~key'))
+        else:
+            client = OpenAI(
+                api_key=rospy.get_param('~key'),
+                base_url=endpoint,
+            )
     elif backend == "azure":
         client = AzureOpenAI(
             api_key=rospy.get_param("~key"),
-            azure_endpoint=rospy.get_param("~azure_endpoint"),
+            azure_endpoint=endpoint,
             api_version=rospy.get_param("~azure_api_version", "2024-07-01-preview"),
         )
     else:
