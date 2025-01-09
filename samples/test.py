@@ -1,15 +1,19 @@
 #!/usr/bin/env python
 
+import argparse
 import rospy
 import json
 import base64
+import os
 from openai_ros.srv import ChatCompletions, ChatCompletionsRequest
 from openai_ros.srv import AudioSpeech, AudioSpeechRequest
+from openai_ros.srv import Embedding, EmbeddingRequest
 
 ##
-def api_reference_making_requests():
+def api_reference_making_requests(model):
+    global chat_completion, audio_speech, get_embedding
     rospy.loginfo("-- Example from https://platform.openai.com/docs/api-reference/making-requests")
-    req = ChatCompletionsRequest(model = 'gpt-3.5-turbo',
+    req = ChatCompletionsRequest(model = model,
                                  messages = '[{"role": "user", "content": "Say this is a test!"}]', 
                                  temperature = 0.7)
     rospy.loginfo("{}".format(req.messages))
@@ -18,8 +22,9 @@ def api_reference_making_requests():
 
 
 ##
-def api_reference_audio():
-    req = AudioSpeechRequest(model = 'tts-1',
+def api_reference_audio(model):
+    global chat_completion, audio_speech, get_embedding
+    req = AudioSpeechRequest(model = model,
                              input = 'The quick brown fox jumped over the lazy dog.',
                              voice = 'alloy')
     rospy.loginfo("-- Example from https://platform.openai.com/docs/api-reference/audio")
@@ -29,9 +34,19 @@ def api_reference_audio():
     rospy.loginfo(">> write to audio_speech.mp3")
 
 ##
-def api_reference_chat_create():
+def api_reference_embedding(model):
+    global chat_completion, audio_speech, get_embedding
+    req = EmbeddingRequest(model = model,
+                           input = 'The food was delicious and the waiter...')
+    rospy.loginfo("-- Example from https://platform.openai.com/docs/api-reference/embeddings")
+    ret = get_embedding(req)
+    rospy.loginfo("Result: {}".format(ret))
+
+##
+def api_reference_chat_create(model):
+    global chat_completion, audio_speech, get_embedding
     rospy.loginfo("-- Example from https://platform.openai.com/docs/api-reference/chat/create")
-    req = ChatCompletionsRequest(model = 'gpt-3.5-turbo',
+    req = ChatCompletionsRequest(model = model,
                                  messages = '[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "Hello!"}]',
                                  temperature = 1.0)
     rospy.loginfo("{}".format(req.messages))
@@ -39,9 +54,10 @@ def api_reference_chat_create():
     rospy.loginfo(">> {}".format(ret.content))
 
 ##
-def guides_vision():
+def guides_vision(model):
+    global chat_completion, audio_speech, get_embedding
     rospy.loginfo("-- Example from https://platform.openai.com/docs/guides/vision/quick-start")
-    req = ChatCompletionsRequest(model = 'gpt-4-vision-preview',
+    req = ChatCompletionsRequest(model = model,
                                  messages = json.dumps([{"role": "user", "content": [ {"type": "text", "text": "What's in this image?"}, {"type": "image_url", "image_url" : {"url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"}}]}]),
                                  temperature = 1.0)
     rospy.loginfo("{}".format(req.messages))
@@ -49,26 +65,49 @@ def guides_vision():
     rospy.loginfo(">> {}".format(ret.content))
 
     ##
-    import cv2
-    img = cv2.imread('/usr/share/backgrounds/ryan-stone-skykomish-river.jpg')
-    _, buf = cv2.imencode('.jpg', img)
-    req = ChatCompletionsRequest(model = 'gpt-4-vision-preview',
-                                 messages = json.dumps([{"role": "user", "content": [ {"type": "text", "text": "What's in this image?"}, {"type": "image_url", "image_url" : {"url": "data:image/jpeg;base64,{}".format(base64.b64encode(buf).decode('utf-8'))}}]}]),
-                                 temperature = 1.0, max_tokens=300)
-    rospy.loginfo("{}".format(req.messages[0:255]))
-    ret = chat_completion(req)
-    rospy.loginfo(">> {}".format(ret.content))
+    imagepath = '/usr/share/backgrounds/ryan-stone-skykomish-river.jpg'
+    if not os.path.exists(imagepath):
+        rospy.logerr("{} not exists. Please install ubuntu-wallpapers-focal".format(imagepath))
+    else:
+        import cv2
+        img = cv2.imread(imagepath)
+        _, buf = cv2.imencode('.jpg', img)
+        req = ChatCompletionsRequest(model = model,
+                                    messages = json.dumps([{"role": "user", "content": [ {"type": "text", "text": "What's in this image?"}, {"type": "image_url", "image_url" : {"url": "data:image/jpeg;base64,{}".format(base64.b64encode(buf).decode('utf-8'))}}]}]),
+                                    temperature = 1.0, max_tokens=300)
+        rospy.loginfo("{}".format(req.messages[0:255]))
+        ret = chat_completion(req)
+        rospy.loginfo(">> {}".format(ret.content))
 
-## 
-rospy.init_node('say_this_is_a_test')
-rospy.wait_for_service('/chat_completions')
-chat_completion = rospy.ServiceProxy('/chat_completions', ChatCompletions)
-rospy.wait_for_service('/audio_speech')
-audio_speech = rospy.ServiceProxy('/audio_speech', AudioSpeech)
-#api_reference_making_requests()
-#api_reference_audio()
-#api_reference_chat_create()
-guides_vision()
+
+def main(mode,
+         model_embedding,
+         model_chat,
+         model_chat_vision,
+         model_audio_speech):
+    global chat_completion, audio_speech, get_embedding
+    ## 
+    rospy.init_node('say_this_is_a_test')
+
+    if mode == "chat":
+        rospy.wait_for_service('/chat_completions')
+        chat_completion = rospy.ServiceProxy('/chat_completions', ChatCompletions)
+        rospy.wait_for_service('/audio_speech')
+        audio_speech = rospy.ServiceProxy('/audio_speech', AudioSpeech)
+
+    rospy.wait_for_service("/get_embedding")
+    get_embedding = rospy.ServiceProxy('/get_embedding', Embedding)
+
+    if mode == "chat":
+        if model_chat is not None:
+            api_reference_making_requests(model=model_chat)
+            api_reference_chat_create(model=model_chat)
+        if model_audio_speech is not None:
+            api_reference_audio(model_audio_speech)
+        if model_chat_vision is not None:
+            guides_vision(model=model_chat_vision)
+    if model_embedding:
+        api_reference_embedding(model=model_embedding)
 
 '''
 from openai import OpenAI
@@ -90,3 +129,24 @@ client = OpenAI()
 
 print(completion.choices[0].message)
 '''
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", default="chat", choices=["chat", "legacy"])
+    parser.add_argument("--model-embedding", default="text-embedding-ada-002")
+    parser.add_argument("--disable-embedding", action="store_true")
+    parser.add_argument("--model-chat", default="gpt-3.5-turbo")
+    parser.add_argument("--disable-chat", action="store_true")
+    parser.add_argument("--model-chat-vision", default="gpt-4o-mini")
+    parser.add_argument("--disable-chat-vision", action="store_true")
+    parser.add_argument("--model-audio-speech", default="tts-1")
+    parser.add_argument("--disable-audio-speech", action="store_true")
+    args = parser.parse_args()
+    print(args)
+    main(
+        mode=args.mode,
+        model_embedding=args.model_embedding if args.disable_embedding is False else None,
+        model_chat=args.model_chat if args.disable_chat is False else None,
+        model_chat_vision=args.model_chat_vision if args.disable_chat_vision is False else None,
+        model_audio_speech=args.model_audio_speech if args.disable_audio_speech is False else None,
+        )

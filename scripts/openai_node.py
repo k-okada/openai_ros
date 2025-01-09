@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 
-from openai_ros.msg import StringArray
-from openai_ros.srv import Completion, CompletionResponse
-from openai_ros.srv import ChatCompletions, ChatCompletionsResponse
-from openai_ros.srv import AudioSpeech, AudioSpeechResponse
-import rospy
-from openai import OpenAI
-import json
 import base64
+import json
+
+import rospy
+from openai import AzureOpenAI, OpenAI
+from typing import Optional
+
+from openai_ros.msg import StringArray
+from openai_ros.srv import (AudioSpeech, AudioSpeechResponse, ChatCompletions,
+                            ChatCompletionsResponse, Completion,
+                            CompletionResponse, Embedding, EmbeddingResponse)
+
 
 def legacy_servicer(req):
     global client, max_tokens, model
@@ -78,14 +82,56 @@ def audio_speech_servicer(req):
     res.content = base64.b64encode(response.content)
     return res
 
+def embedding_servicer(req):
+    global client
+    res = EmbeddingResponse()
+    response = client.embeddings.create(
+        input=[req.input],
+        model=req.model,
+    )
+    res.embedding = response.data[0].embedding
+    res.model = response.model
+    res.prompt_tokens = response.usage.prompt_tokens
+    res.total_tokens = response.usage.total_tokens
+    return res
+
+
 def main():
     global client, max_tokens, model
     pub = rospy.Publisher('available_models', StringArray, queue_size=1, latch=True)
     rospy.init_node('openai_node', anonymous=True)
+    endpoint: Optional[str] = rospy.get_param("~endpoint", None)
+    backend: Optional[str] = rospy.get_param("~backend", None) # openai or azure or None.
 
-    client = OpenAI(api_key=rospy.get_param('~key'))
+    if backend is not None:
+        rospy.logdebug("Backend is set to " + backend)
+    elif (endpoint is not None and len(endpoint) != 0) and endpoint.split("/")[2].endswith('azure.com'):
+        backend = "azure"
+    else:
+        backend = "openai"
+
+    rospy.loginfo("Using " + backend + " backend")
+
+    if backend == "openai":
+        if endpoint is None or len(endpoint) == 0:
+            client = OpenAI(api_key=rospy.get_param('~key'))
+        else:
+            client = OpenAI(
+                api_key=rospy.get_param('~key'),
+                base_url=endpoint,
+            )
+    elif backend == "azure":
+        client = AzureOpenAI(
+            api_key=rospy.get_param("~key"),
+            azure_endpoint=endpoint,
+            api_version=rospy.get_param("~azure_api_version", "2024-07-01-preview"),
+        )
+    else:
+        rospy.logerr("Invalid backend: " + backend)
+        return
+
     max_tokens = rospy.get_param('~max_tokens', default=256)
-    model = rospy.get_param('~model', default='text-davinci-003')
+    model = rospy.get_param('~model', default='gpt-3.5-turbo')
 
     models_msg = StringArray()
     for m in client.models.list():
@@ -114,6 +160,8 @@ def main():
     if endpoint == "chat":
         rospy.Service('chat_completions', ChatCompletions, chat_completions_servicer)
         rospy.Service('audio_speech', AudioSpeech, audio_speech_servicer)
+
+    rospy.Service("get_embedding", Embedding, embedding_servicer)
 
     rospy.spin()
 
