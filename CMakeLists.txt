@@ -36,14 +36,15 @@ catkin_package(
 )
 
 # openai>=0.11.0 Python module requries >= Python3.7.1 (latest openai module that works on Python3.6 was 0.10.5 (2021/10/2)
-# check if python3.7 executable found
-find_program(PYTHON3_PROGRAM NAMES python3.12 python3.11 python3.10 python3.9 python3.8 python3.7)
+# openai==1.58.1 Python module requires >= Python3.8 (2025/1/9)
+# check if python3.8 or later executable found
+find_program(PYTHON3_PROGRAM NAMES python3.12 python3.11 python3.10 python3.9 python3.8)
 get_filename_component(PYTHON3_PROGRAM_NAME ${PYTHON3_PROGRAM} NAME)
 
 if(PYTHON3_PROGRAM)
   message(STATUS "Python executable found: ${PYTHON3_PROGRAM}")
 else()
-  message(FATAL_ERROR "Python 3.7 executable not found, please install 'python3.7' 'python3.7-venv' via apt/rpm etc..")
+  message(FATAL_ERROR "Python>=3.8 executable not found, please install 'python3.8' 'python3.8-venv' or later via apt/rpm etc..")
 endif()
 # generate the virtualenv
 catkin_generate_virtualenv(
